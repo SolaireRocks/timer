@@ -9,7 +9,7 @@
             /* -- VARIABLE TO CHANGE THE TIMER SIZE -- */
             /* Change this value to make the timer bigger or smaller. */
             /* Examples: 15rem, 200px, 25vw */
-            --timer-font-size: 20rem;
+            --timer-font-size: 15rem;
             /* ------------------------------------------ */
         }
 
@@ -42,45 +42,17 @@
                 color: #ecf0f1; /* Original color */
             }
         }
-
-        #player-container {
-            position: absolute;
-            top: -9999px;
-            left: -9999px;
-        }
     </style>
 </head>
 <body>
 
     <div id="timer">3:00</div>
 
-    <div id="player-container">
-        <div id="player"></div>
-    </div>
-
     <script>
-        // -- VARIABLE TO CHANGE THE YOUTUBE VIDEO --
-        const YOUTUBE_VIDEO_ID = 's7L2PVdrb_8'; // Updated video ID
-        // ------------------------------------------
-
         const timerElement = document.getElementById('timer');
         let countdownTimer;
         let timeLeft = 180;
         let timerRunning = false;
-
-        var tag = document.createElement('script');
-        tag.src = "https://www.youtube.com/iframe_api";
-        var firstScriptTag = document.getElementsByTagName('script')[0];
-        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-
-        var player;
-        function onYouTubeIframeAPIReady() {
-            player = new YT.Player('player', {
-                height: '360',
-                width: '640',
-                videoId: YOUTUBE_VIDEO_ID,
-            });
-        }
 
         function updateTimer() {
             const minutes = Math.floor(timeLeft / 60);
@@ -100,17 +72,15 @@
         timerElement.addEventListener('click', () => {
             if (!timerRunning) {
                 timerRunning = true;
-                if (player && typeof player.cueVideoById === 'function') {
-                    player.cueVideoById(YOUTUBE_VIDEO_ID);
-                }
                 countdownTimer = setInterval(updateTimer, 1000);
             }
         });
 
         function playSound() {
-            if (player && typeof player.playVideo === 'function') {
-                player.playVideo();
-            }
+            // This creates a new audio object and plays the mp3 file.
+            // The 'alarm.mp3' file must be in the same folder as this HTML file.
+            const alarmSound = new Audio('alarm.mp3');
+            alarmSound.play();
         }
     </script>
 
