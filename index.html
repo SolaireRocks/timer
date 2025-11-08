@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Adjustable Timer</title>
+    <title>Simple Timer</title>
     <style>
         :root {
             /* -- VARIABLE TO CHANGE THE TIMER SIZE -- */
             /* Change this value to make the timer bigger or smaller. */
             /* Examples: 15rem, 200px, 25vw */
-            --timer-font-size: 10rem;
+            --timer-font-size: 15rem;
             /* ------------------------------------------ */
         }
 
@@ -32,30 +32,6 @@
             margin-bottom: 20px;
         }
         
-        .controls {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 15px; /* Adds space between control elements */
-            width: 80%;
-            max-width: 500px;
-        }
-
-        #sliderLabel {
-            font-size: 1.2rem;
-            user-select: none;
-        }
-
-        #timeSlider {
-            width: 100%;
-            cursor: pointer;
-        }
-        
-        #timeSlider:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
         .button-container {
             margin-top: 20px;
             display: flex;
@@ -103,14 +79,9 @@
 <body>
 
     <div id="timer">3:00</div>
-
-    <div class="controls">
-        <label for="timeSlider" id="sliderLabel">Set Duration: 3 minutes 0 seconds</label>
-        <input type="range" id="timeSlider" min="5" max="300" value="180">
-    </div>
     
     <div class="button-container">
-        <button id="testSoundButton" class="control-button">Test Random Alarm</button>
+        <button id="testSoundButton" class="control-button">Test Alarm</button>
         <button id="resetButton" class="control-button">Reset</button>
     </div>
 
@@ -118,18 +89,21 @@
         const timerElement = document.getElementById('timer');
         const testButton = document.getElementById('testSoundButton');
         const resetButton = document.getElementById('resetButton');
-        const slider = document.getElementById('timeSlider');
-        const sliderLabel = document.getElementById('sliderLabel');
 
+        // The array is kept as requested, but now contains only one sound.
         const alarmSounds = [
             'alarm.mp3'
         ];
 
-        let countdownTimer;
-        let timeLeft = parseInt(slider.value);
-        let timerRunning = false;
-        let currentlyPlayingSound; // NEW: Variable to hold the currently playing audio object
+        // Create one single Audio object and use it for everything.
+        // This is key to making the audio unlock reliable.
+        const alarmSound = new Audio(alarmSounds[0]);
 
+        const startingTime = 180; // 3 minutes in seconds
+        let countdownTimer;
+        let timeLeft = startingTime;
+        let timerRunning = false;
+        
         function formatTime(totalSeconds) {
             const minutes = Math.floor(totalSeconds / 60);
             let seconds = totalSeconds % 60;
@@ -137,86 +111,67 @@
             return `${minutes}:${seconds}`;
         }
         
-        function updateSliderLabel(totalSeconds) {
-            const minutes = Math.floor(totalSeconds / 60);
-            const seconds = totalSeconds % 60;
-            sliderLabel.textContent = `Set Duration: ${minutes} minutes ${seconds} seconds`;
-        }
-        
         function updateTimer() {
             timerElement.textContent = formatTime(timeLeft);
             if (timeLeft === 0) {
                 clearInterval(countdownTimer);
-                playRandomSound();
+                playSound();
                 timerElement.classList.add('is-flashing');
             } else {
                 timeLeft--;
             }
         }
 
-        // NEW: Function to reset the timer state completely
         function resetTimer() {
-            // 1. Stop the interval timer
+            // Stop the interval timer
             clearInterval(countdownTimer);
 
-            // 2. Stop and reset any sound that is playing
-            if (currentlyPlayingSound) {
-                currentlyPlayingSound.pause();
-                currentlyPlayingSound.currentTime = 0;
-            }
+            // Stop and reset the sound if it's playing
+            alarmSound.pause();
+            alarmSound.currentTime = 0;
             
-            // 3. Reset all state variables
+            // Reset state variables
             timerRunning = false;
-            slider.disabled = false;
             
-            // 4. Reset the display to the slider's value
-            timeLeft = parseInt(slider.value);
+            // Reset the display to the starting time
+            timeLeft = startingTime;
             timerElement.textContent = formatTime(timeLeft);
             
-            // 5. Remove the flashing effect
+            // Remove the flashing effect
             timerElement.classList.remove('is-flashing');
         }
         
         timerElement.addEventListener('click', () => {
             if (!timerRunning && timeLeft > 0) {
                 timerRunning = true;
-                slider.disabled = true; 
                 
-                const audioUnlocker = new Audio();
-                audioUnlocker.src = alarmSounds[0];
-                audioUnlocker.play().then(() => audioUnlocker.pause()).catch(() => {});
+                // --- THE SILENT UNLOCK ---
+                // We play and immediately pause the SINGLE alarmSound object.
+                // This happens instantly and silently, but satisfies the browser's
+                // requirement that audio be initiated by a user gesture.
+                alarmSound.play();
+                alarmSound.pause();
                 
                 countdownTimer = setInterval(updateTimer, 1000);
             }
         });
         
-        slider.addEventListener('input', () => {
-            if (!timerRunning) {
-                timeLeft = parseInt(slider.value);
-                timerElement.textContent = formatTime(timeLeft);
-                updateSliderLabel(timeLeft);
-            }
-        });
-
         testButton.addEventListener('click', () => {
-            playRandomSound();
+            playSound();
         });
 
-        // NEW: Add event listener for the reset button
         resetButton.addEventListener('click', resetTimer);
 
-        function playRandomSound() {
-            const randomIndex = Math.floor(Math.random() * alarmSounds.length);
-            const randomSoundFile = alarmSounds[randomIndex];
-            
-            // Assign the new Audio object to our global variable
-            currentlyPlayingSound = new Audio(randomSoundFile);
-            currentlyPlayingSound.play();
+        function playSound() {
+            // Because we already "unlocked" this specific audio object,
+            // the browser will allow it to play now.
+            alarmSound.currentTime = 0; // Rewind to the start
+            alarmSound.play();
         }
 
         // --- INITIAL SETUP ---
+        // Set the initial display of the timer when the page loads
         timerElement.textContent = formatTime(timeLeft);
-        updateSliderLabel(timeLeft);
     </script>
 
 </body>
