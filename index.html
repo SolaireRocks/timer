@@ -15,6 +15,7 @@
 
         body {
             display: flex;
+            flex-direction: column; /* Stack elements vertically */
             justify-content: center;
             align-items: center;
             height: 100vh;
@@ -28,6 +29,22 @@
             color: #ecf0f1;
             cursor: pointer;
             user-select: none;
+        }
+
+        #testSoundButton {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 1rem;
+            color: #fff;
+            background-color: #3498db;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #testSoundButton:hover {
+            background-color: #2980b9;
         }
 
         .is-flashing {
@@ -47,9 +64,16 @@
 <body>
 
     <div id="timer">3:00</div>
+    <button id="testSoundButton">Test Alarm Sound</button>
 
     <script>
         const timerElement = document.getElementById('timer');
+        const testButton = document.getElementById('testSoundButton');
+
+        // --- SOLUTION PART 1: Create the Audio object once and globally. ---
+        // We create the audio element here so we can reference the *same* element later.
+        const alarmSound = new Audio('alarm.mp3');
+
         let countdownTimer;
         let timeLeft = 180;
         let timerRunning = false;
@@ -72,14 +96,31 @@
         timerElement.addEventListener('click', () => {
             if (!timerRunning) {
                 timerRunning = true;
+                
+                // --- SOLUTION PART 2: "Unlock" the audio on the first user interaction. ---
+                // By playing and immediately pausing the sound on the user's first click,
+                // we are satisfying the browser's autoplay policy. The browser now trusts
+                // this specific 'alarmSound' object to be played by the script later on.
+                // We do this inside the `if` so it only happens once.
+                alarmSound.play();
+                alarmSound.pause();
+
                 countdownTimer = setInterval(updateTimer, 1000);
             }
         });
 
+        // This is the function for the new test button.
+        testButton.addEventListener('click', () => {
+            // We use the same playSound function to test.
+            // This also helps "unlock" the audio if the user clicks this first.
+            playSound();
+        });
+
+
         function playSound() {
-            // This creates a new audio object and plays the mp3 file.
-            // The 'alarm.mp3' file must be in the same folder as this HTML file.
-            const alarmSound = new Audio('alarm.mp3');
+            // The function no longer creates a new Audio object.
+            // It just plays the single, global 'alarmSound' that we already "unlocked".
+            alarmSound.currentTime = 0; // Rewind to the start in case it's played again
             alarmSound.play();
         }
     </script>
