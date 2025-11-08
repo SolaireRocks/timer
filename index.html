@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3-Minute Timer</title>
+    <title>Adjustable Timer</title>
     <style>
         :root {
             /* -- VARIABLE TO CHANGE THE TIMER SIZE -- */
             /* Change this value to make the timer bigger or smaller. */
             /* Examples: 15rem, 200px, 25vw */
-            --timer-font-size: 15rem;
+            --timer-font-size: 10rem;
             /* ------------------------------------------ */
         }
 
@@ -22,29 +22,68 @@
             background-color: #2c3e50;
             margin: 0;
             font-family: 'Arial', sans-serif;
+            color: #ecf0f1;
         }
 
         #timer {
             font-size: var(--timer-font-size); /* Uses the variable from above */
-            color: #ecf0f1;
             cursor: pointer;
+            user-select: none;
+            margin-bottom: 20px;
+        }
+        
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px; /* Adds space between control elements */
+            width: 80%;
+            max-width: 500px;
+        }
+
+        #sliderLabel {
+            font-size: 1.2rem;
             user-select: none;
         }
 
-        #testSoundButton {
+        #timeSlider {
+            width: 100%;
+            cursor: pointer;
+        }
+        
+        #timeSlider:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .button-container {
             margin-top: 20px;
+            display: flex;
+            gap: 15px; /* Space between buttons */
+        }
+
+        .control-button {
             padding: 10px 20px;
             font-size: 1rem;
             color: #fff;
-            background-color: #3498db;
             border: none;
             border-radius: 5px;
             cursor: pointer;
             transition: background-color 0.3s;
         }
 
+        #testSoundButton {
+            background-color: #3498db; /* Blue */
+        }
         #testSoundButton:hover {
             background-color: #2980b9;
+        }
+        
+        #resetButton {
+            background-color: #e74c3c; /* Red */
+        }
+        #resetButton:hover {
+            background-color: #c0392b;
         }
 
         .is-flashing {
@@ -53,10 +92,10 @@
 
         @keyframes flash {
             0%, 100% {
-                color: #e74c3c; /* Red */
+                color: #e74c3c;
             }
             50% {
-                color: #ecf0f1; /* Original color */
+                color: #ecf0f1;
             }
         }
     </style>
@@ -64,65 +103,120 @@
 <body>
 
     <div id="timer">3:00</div>
-    <button id="testSoundButton">Test Alarm Sound</button>
+
+    <div class="controls">
+        <label for="timeSlider" id="sliderLabel">Set Duration: 3 minutes 0 seconds</label>
+        <input type="range" id="timeSlider" min="5" max="300" value="180">
+    </div>
+    
+    <div class="button-container">
+        <button id="testSoundButton" class="control-button">Test Random Alarm</button>
+        <button id="resetButton" class="control-button">Reset</button>
+    </div>
 
     <script>
         const timerElement = document.getElementById('timer');
         const testButton = document.getElementById('testSoundButton');
+        const resetButton = document.getElementById('resetButton');
+        const slider = document.getElementById('timeSlider');
+        const sliderLabel = document.getElementById('sliderLabel');
 
-        // --- SOLUTION PART 1: Create the Audio object once and globally. ---
-        // We create the audio element here so we can reference the *same* element later.
-        const alarmSound = new Audio('alarm.mp3');
+        const alarmSounds = [
+            'alarm.mp3'
+        ];
 
         let countdownTimer;
-        let timeLeft = 180;
+        let timeLeft = parseInt(slider.value);
         let timerRunning = false;
+        let currentlyPlayingSound; // NEW: Variable to hold the currently playing audio object
 
-        function updateTimer() {
-            const minutes = Math.floor(timeLeft / 60);
-            let seconds = timeLeft % 60;
+        function formatTime(totalSeconds) {
+            const minutes = Math.floor(totalSeconds / 60);
+            let seconds = totalSeconds % 60;
             seconds = seconds < 10 ? '0' + seconds : seconds;
-            timerElement.textContent = `${minutes}:${seconds}`;
-
+            return `${minutes}:${seconds}`;
+        }
+        
+        function updateSliderLabel(totalSeconds) {
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            sliderLabel.textContent = `Set Duration: ${minutes} minutes ${seconds} seconds`;
+        }
+        
+        function updateTimer() {
+            timerElement.textContent = formatTime(timeLeft);
             if (timeLeft === 0) {
                 clearInterval(countdownTimer);
-                playSound();
+                playRandomSound();
                 timerElement.classList.add('is-flashing');
             } else {
                 timeLeft--;
             }
         }
 
-        timerElement.addEventListener('click', () => {
-            if (!timerRunning) {
-                timerRunning = true;
-                
-                // --- SOLUTION PART 2: "Unlock" the audio on the first user interaction. ---
-                // By playing and immediately pausing the sound on the user's first click,
-                // we are satisfying the browser's autoplay policy. The browser now trusts
-                // this specific 'alarmSound' object to be played by the script later on.
-                // We do this inside the `if` so it only happens once.
-                alarmSound.play();
-                alarmSound.pause();
+        // NEW: Function to reset the timer state completely
+        function resetTimer() {
+            // 1. Stop the interval timer
+            clearInterval(countdownTimer);
 
+            // 2. Stop and reset any sound that is playing
+            if (currentlyPlayingSound) {
+                currentlyPlayingSound.pause();
+                currentlyPlayingSound.currentTime = 0;
+            }
+            
+            // 3. Reset all state variables
+            timerRunning = false;
+            slider.disabled = false;
+            
+            // 4. Reset the display to the slider's value
+            timeLeft = parseInt(slider.value);
+            timerElement.textContent = formatTime(timeLeft);
+            
+            // 5. Remove the flashing effect
+            timerElement.classList.remove('is-flashing');
+        }
+        
+        timerElement.addEventListener('click', () => {
+            if (!timerRunning && timeLeft > 0) {
+                timerRunning = true;
+                slider.disabled = true; 
+                
+                const audioUnlocker = new Audio();
+                audioUnlocker.src = alarmSounds[0];
+                audioUnlocker.play().then(() => audioUnlocker.pause()).catch(() => {});
+                
                 countdownTimer = setInterval(updateTimer, 1000);
             }
         });
-
-        // This is the function for the new test button.
-        testButton.addEventListener('click', () => {
-            // We use the same playSound function to test.
-            // This also helps "unlock" the audio if the user clicks this first.
-            playSound();
+        
+        slider.addEventListener('input', () => {
+            if (!timerRunning) {
+                timeLeft = parseInt(slider.value);
+                timerElement.textContent = formatTime(timeLeft);
+                updateSliderLabel(timeLeft);
+            }
         });
 
+        testButton.addEventListener('click', () => {
+            playRandomSound();
+        });
 
-        function playSound() {
-            // The function no longer creates a new Audio object.
-            // It just plays the single, global 'alarmSound' that we already "unlocked".
-            alarmSound.currentTime = 0; // Rewind to the start in case it's played again
-            alarmSound.play();
+        // NEW: Add event listener for the reset button
+        resetButton.addEventListener('click', resetTimer);
+
+        function playRandomSound() {
+            const randomIndex = Math.floor(Math.random() * alarmSounds.length);
+            const randomSoundFile = alarmSounds[randomIndex];
+            
+            // Assign the new Audio object to our global variable
+            currentlyPlayingSound = new Audio(randomSoundFile);
+            currentlyPlayingSound.play();
         }
+
+        // --- INITIAL SETUP ---
+        timerElement.textContent = formatTime(timeLeft);
+        updateSliderLabel(timeLeft);
     </script>
 
 </body>
