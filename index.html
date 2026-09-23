@@ -237,30 +237,6 @@
         let timeLeft = startingTime;
         let timerRunning = false;
         
-        // --- SYNTHESIZE START SOUND ---
-        function playStartTick() {
-            try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                
-                osc.type = 'sine';
-                // A quick "plop" sound
-                osc.frequency.setValueAtTime(800, ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.1);
-                
-                gain.gain.setValueAtTime(1, ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
-                
-                osc.start(ctx.currentTime);
-                osc.stop(ctx.currentTime + 0.1);
-            } catch(e) {
-                console.log("AudioContext not supported for tick");
-            }
-        }
-        
         function formatTime(totalSeconds) {
             const minutes = Math.floor(totalSeconds / 60);
             let seconds = totalSeconds % 60;
@@ -269,6 +245,7 @@
         }
         
         function updateTimer() {
+            timerElement.classList.remove('timer-started-feedback');
             timerElement.textContent = formatTime(timeLeft);
             if (timeLeft === 0) {
                 clearInterval(countdownTimer);
@@ -306,12 +283,8 @@
                 alarmSound.play().catch(() => {});
                 alarmSound.pause();
                 
-                // Play small start sound and show visual feedback
-                playStartTick();
+                // Show visual feedback (removed on first tick)
                 timerElement.classList.add('timer-started-feedback');
-                setTimeout(() => {
-                    timerElement.classList.remove('timer-started-feedback');
-                }, 150);
                 
                 countdownTimer = setInterval(updateTimer, 1000);
             }
